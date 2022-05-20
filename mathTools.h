@@ -29,6 +29,54 @@ inline Mat3 skew(const Vec3& v) {
     return m;
 }
 
+enum class TurnDirection{
+    NOMATTER,
+    POSITIVE,
+    NEGATIVE
+};
+
+/* first - second */
+inline double angleError(double first, double second, TurnDirection direction = TurnDirection::NOMATTER){
+    double firstMod = fmod(first, 2.0*M_PI);
+    double secondMod = fmod(second, 2.0*M_PI);
+
+    if(direction == TurnDirection::NOMATTER){
+        if(fabs(firstMod - secondMod) > fabs(secondMod - firstMod)){
+            return secondMod - firstMod;
+        }else{
+            return firstMod - secondMod;
+        }
+    }
+    else if(direction == TurnDirection::POSITIVE){
+        if(firstMod - secondMod < 0.0){
+            return 2*M_PI + firstMod - secondMod;
+        }else{
+            return firstMod - secondMod;
+        }
+    }
+    else if(direction == TurnDirection::NEGATIVE){
+        if(firstMod - secondMod > 0.0){
+            return -2*M_PI + firstMod - secondMod;
+        }else{
+            return firstMod - secondMod;
+        }
+    }
+}
+
+/* firstVec - secondVec */
+inline VecX angleError(VecX firstVec, VecX secondVec, TurnDirection directionMatter = TurnDirection::NOMATTER){
+    if(firstVec.rows() != secondVec.rows()){
+        std::cout << "[ERROR] angleError, the sizes of firstVec and secondVec are different!" << std::endl;
+    }
+
+    VecX result = firstVec;
+    for(int i(0); i<firstVec.rows(); ++i){
+        result(i) = angleError(firstVec(i), secondVec(i), directionMatter);
+    }
+
+    return result;
+}
+
 inline bool vectorEqual(VecX v1, VecX v2, double tolerance){
     if(v1.rows() != v2.rows()){
         std::cout << "[WARNING] vectorEqual, the size of two vectors is not equal, v1 is "
@@ -36,7 +84,7 @@ inline bool vectorEqual(VecX v1, VecX v2, double tolerance){
         return false;
     }
     for(int i(0); i<v1.rows(); ++i){
-        if(abs(v1(i)-v2(i))>tolerance){
+        if(fabs(v1(i)-v2(i))>tolerance){
             return false;
         }
     }
@@ -56,14 +104,42 @@ inline RotMat so3ToRotMat(const Vec3& _rot){
     return R;
 }
 
-inline double saturation(const double a, Vec2 limits){
+inline bool inInterval(double value, double limValue1, double limValue2, bool canEqual1 = false, bool canEqual2 = false){
     double lowLim, highLim;
-    if(limits(0) > limits(1)){
-        lowLim = limits(1);
-        highLim= limits(0);
+    bool lowEqual, highEqual;
+    if(limValue1 >= limValue2){
+        highLim   = limValue1;
+        highEqual = canEqual1;
+        lowLim    = limValue2;
+        lowEqual  = canEqual2;
     }else{
-        lowLim = limits(0);
-        highLim= limits(1);
+        lowLim    = limValue1;
+        lowEqual  = canEqual1;
+        highLim   = limValue2;
+        highEqual = canEqual2;
+    }
+
+    if((value > highLim) || (value < lowLim)){
+        return false;
+    }
+    if((value == highLim) && !highEqual){
+        return false;
+    }
+    if((value == lowLim) && !lowEqual){
+        return false;
+    }
+
+    return true;
+}
+
+inline double saturation(const double a, double limValue1, double limValue2){
+    double lowLim, highLim;
+    if(limValue1 >= limValue2){
+        lowLim = limValue2;
+        highLim= limValue1;
+    }else{
+        lowLim = limValue1;
+        highLim= limValue2;
     }
 
     if(a < lowLim){
@@ -75,6 +151,10 @@ inline double saturation(const double a, Vec2 limits){
     else{
         return a;
     }
+}
+
+inline double saturation(const double a, Vec2 limits){
+    return saturation(a, limits(0), limits(1));
 }
 
 template<typename T0, typename T1>
@@ -147,7 +227,7 @@ inline void updateAvgCov(T1 &cov, T2 &exp, T3 newValue, double n){
 }
 
 /* rotate matrix about x axis */
-inline RotMat rotx(const double &theta) {
+inline RotMat rotX(const double &theta) {
     double s = std::sin(theta);
     double c = std::cos(theta);
 
@@ -157,7 +237,7 @@ inline RotMat rotx(const double &theta) {
 }
 
 /* rotate matrix about y axis */
-inline RotMat roty(const double &theta) {
+inline RotMat rotY(const double &theta) {
     double s = std::sin(theta);
     double c = std::cos(theta);
 
@@ -167,7 +247,7 @@ inline RotMat roty(const double &theta) {
 }
 
 /* rotate matrix about z axis */
-inline RotMat rotz(const double &theta) {
+inline RotMat rotZ(const double &theta) {
     double s = std::sin(theta);
     double c = std::cos(theta);
 
@@ -178,7 +258,7 @@ inline RotMat rotz(const double &theta) {
 
 /* row pitch yaw to rotate matrix */
 inline RotMat rpyToRotMat(const double& row, const double& pitch, const double& yaw) {
-    RotMat m = rotz(yaw) * roty(pitch) * rotx(row);
+    RotMat m = rotZ(yaw) * rotY(pitch) * rotX(row);
     return m;
 }
 
@@ -284,6 +364,7 @@ inline HomoMat homoMatrixRotate(Vec3 q, Vec3 w){
     homoM.setZero();
     homoM.topLeftCorner(3, 3) = rotateM;
     homoM.topRightCorner(3, 1) = (eye3 - rotateM) * q;
+    // homoM.topRightCorner(3, 1) = q;
     homoM(3, 3) = 1;
 
     return homoM;
