@@ -1,7 +1,7 @@
 #include "mathTools.h"
 
 
-
+using namespace bianLib;
 
 /*
     vectorEqual

@@ -3,6 +3,8 @@
 
 #include <eigen3/Eigen/Dense>
 
+namespace bianLib{
+
 /************************/
 /******** Vector ********/
 /************************/
@@ -86,6 +88,8 @@ inline Vec12 vec34ToVec12(Vec34 vec34){
         vec12.segment(3*i, 3) = vec34.col(i);
     }
     return vec12;
+}
+
 }
 
 #endif  // MATHTYPES_H
