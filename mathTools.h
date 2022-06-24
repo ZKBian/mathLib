@@ -258,7 +258,10 @@ inline RotMat rotZ(const double &theta) {
     return R;
 }
 
-/* row pitch yaw to rotate matrix */
+/* 
+row pitch yaw to rotate matrix 
+Y-P-R order
+*/
 inline RotMat rpyToRotMat(const double& row, const double& pitch, const double& yaw) {
     RotMat m = rotZ(yaw) * rotY(pitch) * rotX(row);
     return m;
@@ -272,11 +275,23 @@ inline Vec3 rotMatToRPY(const Mat3& R) {
     return rpy;
 }
 
-inline RotMat quatToRotMat(const Quat& q) {
-    double e0 = q(0);
-    double e1 = q(1);
-    double e2 = q(2);
-    double e3 = q(3);
+inline RotMat quatToRotMat(const Quat& q, bool wxyz = true) {
+    double e0;
+    double e1;
+    double e2;
+    double e3;
+
+    if(wxyz){
+        e0 = q(0);
+        e1 = q(1);
+        e2 = q(2);
+        e3 = q(3);
+    }else{
+        e0 = q(3);
+        e1 = q(0);
+        e2 = q(1);
+        e3 = q(2);
+    }
 
     RotMat R;
     R << 1 - 2 * (e2 * e2 + e3 * e3), 2 * (e1 * e2 - e0 * e3),
